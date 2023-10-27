@@ -11,7 +11,7 @@ pragma solidity 0.8.19;
  * 1
  * - acceso: que solo el admin sea quien pueda ejecutar una función
  *   nombre modifer: soloAdmin
- *   aplicar al método: metodoAccesoProtegido
+ *   aplicar al método: metodoAccesoProtegido   
  *
  * 2
  * - permiso: que personas de una lista puedan llamar a un método
@@ -48,12 +48,12 @@ contract Desafio_2 {
     // 1
     // definir un 'admin'
     // no cambiar
-    address public admin = 0x08Fb288FcC281969A0BBE6773857F99360f2Ca06;
+    //address public admin = 0x08Fb288FcC281969A0BBE6773857F99360f2Ca06;
 
-    modifier soloAdmin() {
+    //modifier soloAdmin() {
         // definir logica
-        _;
-    }
+    //    _;
+    //}
 
     // function metodoAccesoProtegido() {
     //     // ...logica
@@ -71,7 +71,7 @@ contract Desafio_2 {
     // 3
     // definir un rango de tiempo cualquiera (e.g. hoy + 30 days)
     // En solidity se cumple que: 1 days = 86400 seconds
-    uint256 public tiempoLimite = block.timestamp + 30 days;
+    //uint256 public tiempoLimite = block.timestamp + 30 days;
 
     // modifier soloEnTiempo
 
@@ -85,4 +85,50 @@ contract Desafio_2 {
     // function metodoPausaProtegido
 
     // function cambiarPausa()
+
+    address public admin = 0x08Fb288FcC281969A0BBE6773857F99360f2Ca06;
+    uint256 public tiempoLimite = block.timestamp + 30 days;
+    mapping (address => bool) listaBlanca;
+    bool pausado;
+    
+    modifier soloAdmin() {
+        require(msg.sender == admin, "No eres el admin");
+        _;
+    }
+    modifier soloListaBlanca() {
+        require(listaBlanca[msg.sender], "Fuera de la lista blanca");
+        _;
+    }
+    modifier soloEnTiempo(){
+        require(block.timestamp <= tiempoLimite, "Fuera de tiempo");
+        _;
+    }
+    modifier pausa(){
+        require(!pausado, "El metodo esta pausado");
+        _;
+    }
+
+    function incluirEnListaBlanca(address _usuario) soloAdmin public {
+        listaBlanca[_usuario]=true;
+    }
+
+    function cambiarPausa() soloAdmin public {
+        pausado = !pausado;
+    }
+
+    function metodoAccesoProtegido() soloAdmin public  {
+    
+    }
+
+    function metodoPermisoProtegido() soloListaBlanca public {
+
+    }
+
+    function metodoTiempoProtegido() soloEnTiempo public {
+
+    }
+
+    function metodoPausaProtegido() pausa public {
+
+    }
 }

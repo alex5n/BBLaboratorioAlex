@@ -34,7 +34,7 @@ contract MiPrimerNft is ERC721, Pausable, AccessControl, ERC721Burnable {
     }
 
     function _baseURI() internal pure override returns (string memory) {
-        return "ipfs://Qma4s6uyVSCaTouXM8N8AkAL4jc11D53Tsn1kZPs4CGd6b/";
+        return "ipfs://QmXr545mHuppYgPCuWrX1GLSxUWcGCu4CmyvJMYdWPuZgu/";
     }
 
     function pause() public onlyRole(PAUSER_ROLE) {

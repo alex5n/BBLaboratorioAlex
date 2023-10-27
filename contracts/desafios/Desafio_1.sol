@@ -58,23 +58,41 @@ pragma solidity 0.8.19;
  * npx hardhat test test/DesafioTesting_1.js
  */
 
+
 contract Desafio_1 {
     // Mapping simple
     // map: address => uint256 activosSimple;
+    mapping(address => uint256) public activosSimple;
+    mapping(address => mapping(uint256 => uint256)) public activosDouble;
+    mapping(uint256 => mapping(address => mapping(uint256 => uint256))) public activosTriple;
 
-    function guardarActivoSimple() public /**...address, uint256 */ {
+    error CiudadInvalidaError(uint _ciudadId);
 
+    function guardarActivoSimple(address _usuario, uint256 _cantidad) public /**...address, uint256 */ {
+        require(_usuario != address(0), "El address no puede ser 0x00");
+        activosSimple[_usuario] = _cantidad;
     }
 
     // Mapping double
     // map: usuario => activoId => cantidad activosDouble;
 
-    function guardarActivoDoble() public {}
+    function guardarActivoDoble(address _usuario, uint256 _activoId, uint256 _cantidad) public {
+        require(_usuario != address(0), "El address no puede ser 0x00");
+        require(_activoId >= 1 && _activoId <= 999999, "Codigo de activo invalido");
+        activosDouble[_usuario][_activoId] = _cantidad;
+    }
 
     // Mapping double
     // error Ciudad...
 
     // map: ciudadId => usuario => activoId => cantidad activosTriple;
 
-    function guardarActivoTriple() public {}
+    function guardarActivoTriple(uint256 _ciudadId, address _usuario, uint256 _activoId, uint256 _cantidad) public {
+        require(_usuario != address(0), "El address no puede ser 0x00");
+        require(_activoId >= 1 && _activoId <= 999999, "Codigo de activo invalido");
+        if (_ciudadId < 1 || _ciudadId > 999999) {
+            revert CiudadInvalidaError(_ciudadId);
+        }
+        activosTriple[_ciudadId][_usuario][_activoId] = _cantidad;
+    }
 }

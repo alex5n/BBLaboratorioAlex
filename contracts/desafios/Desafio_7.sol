@@ -3,6 +3,7 @@ pragma solidity 0.8.19;
 
 import "@openzeppelin/contracts/security/Pausable.sol";
 import "@openzeppelin/contracts/access/AccessControl.sol";
+import "hardhat/console.sol";
 
 /**
 REPETIBLE CON LÍMITE, PREMIO POR REFERIDO
@@ -24,11 +25,84 @@ contract AirdropTwo is Pausable, AccessControl {
     // instanciamos el token en el contrato
     IMiPrimerTKN miPrimerToken;
 
-    constructor(address _tokenAddress) {}
+    struct Participante{
+        address usuario;
+        uint8 totalParticipaciones;
+        uint16 limiteParticipaciones;
+        bool participacionDia;
+        uint inicio;
+    }
+    
+    mapping(address=>Participante) public participantes;
+    uint public constant maxSupply = 10**6*10**18;
+    uint totalSupply;
 
-    function participateInAirdrop() public {}
+    modifier totalSupplyTop(){
+        require(totalSupply<maxSupply);
+        _;
+    }
+    modifier limiteParticipaciones(){
+        if(participantes[msg.sender].totalParticipaciones == 0){
+            inicializar();
+        }
+        require(participantes[msg.sender].totalParticipaciones<participantes[msg.sender].limiteParticipaciones, "Llegaste limite de participaciones");
+        _;
+    }
+    modifier participoDia(){
+        Participante storage participante = participantes[msg.sender];
+        if(participante.inicio+(1 days)<=block.timestamp){
+            actualizarParticipacion();
+        }
+        require(!participantes[msg.sender].participacionDia, "Ya participaste en el ultimo dia");
+        _;
+    }
+    modifier noUnoMismo(address _elQueRefirio){
+        require(msg.sender!=_elQueRefirio, "No puede autoreferirse");
+        _;
+    }
 
-    function participateInAirdrop(address _elQueRefirio) public {}
+    constructor(address) { 
+        _grantRole(DEFAULT_ADMIN_ROLE, msg.sender);
+    }
+
+    function inicializar() internal{
+        Participante storage participante = participantes[msg.sender];
+        participante.usuario = msg.sender;
+        participante.limiteParticipaciones = 10;
+        participante.inicio = block.timestamp; 
+    }
+
+    function actualizarParticipacion() internal{
+        Participante storage participante = participantes[msg.sender];
+        participante.participacionDia=false;
+        participante.inicio=block.timestamp;
+    }
+
+    function participateInAirdrop() public totalSupplyTop limiteParticipaciones participoDia {
+        uint amount = _getRadomNumber10005000();
+        require(miPrimerToken.balanceOf(address(this))>=amount,"El contrato Airdrop no tiene tokens suficientes");
+        Participante storage participante = participantes[msg.sender];
+        totalSupply+=amount;
+        participantes[msg.sender].totalParticipaciones++;
+        participante.participacionDia=true;
+        bool success = miPrimerToken.transfer(msg.sender, amount);
+        require(success);
+    }
+
+    function participateInAirdrop(address _elQueRefirio) public totalSupplyTop limiteParticipaciones participoDia noUnoMismo(_elQueRefirio){
+        uint amount = _getRadomNumber10005000();
+        require(miPrimerToken.balanceOf(address(this))>=amount,"El contrato Airdrop no tiene tokens suficientes");
+        Participante storage participante = participantes[msg.sender];
+        totalSupply+=amount;
+        participantes[msg.sender].totalParticipaciones++;
+        participante.participacionDia=true;
+        if(participantes[_elQueRefirio].limiteParticipaciones==0){
+            participantes[_elQueRefirio].limiteParticipaciones=10;
+        }
+        participantes[_elQueRefirio].limiteParticipaciones+=3;
+        bool success = miPrimerToken.transfer(msg.sender, amount);
+        require(success);
+    }
 
     ///////////////////////////////////////////////////////////////
     ////                     HELPER FUNCTIONS                  ////
@@ -55,4 +129,5 @@ contract AirdropTwo is Pausable, AccessControl {
             miPrimerToken.balanceOf(address(this))
         );
     }
+
 }

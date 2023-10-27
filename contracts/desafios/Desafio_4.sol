@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.19;
 
+import "hardhat/console.sol";
+
 /** CUASI SUBASTA INGLESA
  *
  * Descripción:
@@ -60,12 +62,28 @@ pragma solidity 0.8.19;
  *
  * Para correr el test de este contrato:
  * $ npx hardhat test test/EjercicioIntegrador_4.ts
+ * $ npx hardhat test test/DesafioTesting_4.js
  */
 
 contract Desafio_4 {
+
+    struct Auction{
+        bytes32 autionId;
+        bool start;
+        uint startTime;
+        uint EndTime;
+        mapping (address => uint) offers;
+        address highestBidder;
+        uint highestBid;
+    }
+    bytes32[] subastasActivas;
+    mapping(bytes32 auctionId => Auction) auctions;
+    mapping(bytes32 auctionId => uint position) posicionSubastas;
+
     event SubastaCreada(bytes32 indexed _auctionId, address indexed _creator);
     event OfertaPropuesta(address indexed _bidder, uint256 _bid);
     event SubastaFinalizada(address indexed _winner, uint256 _bid);
+    event Receive();
 
     error CantidadIncorrectaEth();
     error TiempoInvalido();
@@ -74,25 +92,86 @@ contract Desafio_4 {
     error OfertaInvalida();
     error SubastaEnMarcha();
 
-    function creaSubasta(uint256 _startTime, uint256 _endTime) public payable {
-        bytes32 _auctionId = _createId(_startTime, _endTime);
+    receive() external  payable{
+        emit Receive();
+    }
 
-        // emit SubastaCreada(_auctionId, msg.sender);
+    function creaSubasta(uint256 _startTime, uint256 _endTime) public payable {
+        if(msg.value<1e18){
+            revert CantidadIncorrectaEth();
+        }
+        if(_endTime<=_startTime){
+            revert TiempoInvalido();
+        }
+        bytes32 _auctionId = _createId(_startTime, _endTime);
+        subastasActivas.push(_auctionId);
+        posicionSubastas[_auctionId]=subastasActivas.length-1;
+        Auction storage auction=auctions[_auctionId];
+        auction.autionId=_auctionId;
+        auction.startTime=_startTime;
+        auction.EndTime=_endTime;
+        emit SubastaCreada(_auctionId, msg.sender);
     }
 
     function proponerOferta(bytes32 _auctionId) public payable {
-        // emit OfertaPropuesta(msg.sender, auction.offers[msg.sender]);
+        uint pos = posicionSubastas[_auctionId];
+        Auction storage auction=auctions[_auctionId];
+        if(subastasActivas[pos] != _auctionId){
+            revert SubastaInexistente();
+        }
+        if(block.timestamp>auction.EndTime){
+            revert FueraDeTiempo();
+        }
+        if(msg.value<auction.highestBid){
+            revert OfertaInvalida();
+        }
+        auction.offers[msg.sender]=msg.value;
+        auction.highestBid=msg.value;
+        auction.highestBidder=msg.sender;
+        emit OfertaPropuesta(msg.sender, auction.offers[msg.sender]);
+        if(block.timestamp>auction.EndTime-5 && block.timestamp<=auction.EndTime){
+            auction.EndTime+=(5 minutes);
+            //auction.EndTime=auction.EndTime + (5 minutes);
+        }
+        //console.log(address(this).balance/(10**17));
     }
 
     function finalizarSubasta(bytes32 _auctionId) public {
-        // emit SubastaFinalizada(auction.highestBidder, auction.highestBid);
+        uint pos = posicionSubastas[_auctionId];
+        Auction storage auction=auctions[_auctionId];
+        if(subastasActivas.length>0){
+            if(subastasActivas[pos] != _auctionId){
+                revert SubastaInexistente();
+            }
+        }else{
+            revert SubastaInexistente();
+        }
+        if(block.timestamp<=auction.EndTime){
+            revert SubastaEnMarcha();
+        }
+        subastasActivas[pos]=subastasActivas[subastasActivas.length-1];
+        delete posicionSubastas[_auctionId];
+        posicionSubastas[subastasActivas[subastasActivas.length-1]]=pos;
+        subastasActivas.pop();
+        emit SubastaFinalizada(auction.highestBidder, auction.highestBid);
     }
 
     function recuperarOferta(bytes32 _auctionId) public {
-        // payable(msg.sender).transfer(amount);
+        Auction storage auction=auctions[_auctionId];
+        if(block.timestamp<=auction.EndTime){
+            revert SubastaEnMarcha();
+        }else{
+            uint amount = auction.offers[msg.sender];
+            if(msg.sender==auction.highestBidder){
+                amount+=(1 ether);
+            } 
+            payable(msg.sender).transfer(amount);
+        }
     }
 
-    function verSubastasActivas() public view returns (bytes32[] memory) {}
+    function verSubastasActivas() public view returns (bytes32[] memory) {
+        return subastasActivas;
+    }
 
     ////////////////////////////////////////////////////////////////////////////////
     ////////////////////////////   INTERNAL METHODS  ///////////////////////////////

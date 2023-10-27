@@ -67,7 +67,7 @@ contract Desafio_3 {
     // - aumentar el balance del usuario en '_cantidad'
     // - aumentar el balance total del cajero automático en '_cantidad'
     // - emitir evento 'Deposit'
-    function depositar(uint256 _cantidad) public {}
+    //function depositar(uint256 _cantidad) public {}
 
     // 4 - definición de método 'retirar'
     // definir función 'retirar' que recibe un parámetro uint256 '_cantidad' y es 'public'
@@ -75,7 +75,7 @@ contract Desafio_3 {
     // - disminuir el balance del usuario en '_cantidad'
     // - disminuir el balance total del cajero automático en '_cantidad'
     // - emitir evento 'Withdraw'
-    function retirar(uint256 _cantidad) public {}
+    //function retirar(uint256 _cantidad) public {}
 
     // 6 - definición de método 'transferir'
     // definir función 'transferir' que recibe dos parámetros: address '_destinatario' y uint256 '_cantidad' y es 'public'
@@ -83,7 +83,7 @@ contract Desafio_3 {
     // - disminuir el balance del usuario en '_cantidad'
     // - aumentar el balance del destinatario en '_cantidad'
     // - emitir evento 'Transfer'
-    function transferir(address _destinatario, uint256 _cantidad) public {}
+    //function transferir(address _destinatario, uint256 _cantidad) public {}
 
     // 8 - definición de método 'cambiarPausado'
     // definir función 'cambiarPausado' que es 'public' y solo puede ser llamada por el admin (usar modifier)
@@ -92,4 +92,51 @@ contract Desafio_3 {
     // function cambiarPausado() public soloAdmin {
     //     pausado = !pausado;
     // }
+    address public admin = 0x08Fb288FcC281969A0BBE6773857F99360f2Ca06;
+    bool public pausado;
+    uint public balanceTotal;
+    mapping (address => uint) public balances;
+
+    modifier soloAdmin(){
+        require(msg.sender==admin,"Solo el admin puede ejecutar esta funcion");
+        _;
+    }
+    modifier cuandoNoPausado(){
+        require(!pausado,"El contrato esta pausado");
+        _;
+    }
+
+    event Deposit (address _from, uint _value);
+    event Transfer (address _from, address _to, uint _value);
+    event Withdraw (address _to, uint _value);
+
+    error SaldoInsuficiente();  
+
+    function depositar(uint256 _cantidad) cuandoNoPausado public {
+        balances[msg.sender]+=_cantidad;
+        balanceTotal+=_cantidad;
+        emit Deposit(msg.sender, _cantidad);
+    }
+
+    function retirar(uint256 _cantidad) cuandoNoPausado public {
+        require(balances[msg.sender] >= _cantidad,"Saldo insuficiente");
+        balances[msg.sender]-=_cantidad;
+        balanceTotal-=_cantidad;
+        emit Withdraw(msg.sender, _cantidad);
+    }
+
+    function transferir(address _destinatario, uint256 _cantidad) cuandoNoPausado public {
+        if (balances[msg.sender]<_cantidad){
+            revert SaldoInsuficiente();
+        }
+        else{
+            balances[msg.sender]-=_cantidad;
+            balances[_destinatario]+=_cantidad;
+            emit Transfer(msg.sender, _destinatario, _cantidad);
+        }
+    }
+
+    function cambiarPausado() public soloAdmin {
+        pausado = !pausado;
+    }
 }

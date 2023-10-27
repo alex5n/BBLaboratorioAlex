@@ -3,6 +3,7 @@ const keccak256 = require("keccak256");
 const { ethers } = require("hardhat");
 const walletAndIds = require("../../utils/walletAndIds");
 
+var merkleTree, root;
 function hashToken(tokenId, account) {
   return Buffer.from(
     ethers
@@ -12,7 +13,6 @@ function hashToken(tokenId, account) {
   );
 }
 
-var merkleTree, root;
 function construyendoMerkleTree() {
   var elementosHasheados = walletAndIds.map(({ tokenId, account }) => {
     return hashToken(tokenId, account);
